@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat GPT</title>
+</head>
+<style>
+  .container {
+  max-width: 600px;
+  margin: 0 auto;
+  }
+
+  .chat-window {
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    margin-top: 50px;
+    padding: 20px;
+  }
+
+  .conversation-container {
+    height: 300px;
+    overflow-y: scroll;
+  }
+
+  .input-panel {
+    display: flex;
+    margin-top: 20px;
+  }
+
+  .input-label {
+    font-size: 18px;
+    margin-right: 10px;
+  }
+
+  .input-field {
+    flex: 1;
+    padding: 5px;
+    font-size: 16px;
+  }
+
+  .submit-button {
+    padding: 5px 20px;
+    background-color: #4CAF50;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease-in-out;
+  }
+
+  .submit-button:hover {
+    background-color: #3e8e41;
+  }
+
+  .user-message {
+    list-style: none;
+    margin-bottom: 10px;
+  }
+
+  .bot-message {
+    list-style: none;
+    margin-bottom: 10px;
+  }
+
+  .user-message > .message-text {
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    padding: 10px;
+    display: inline-block;
+    max-width: 60%;
+  }
+
+  .bot-message > .message-text {
+    background-color: #333;
+    color: white;
+    border-radius: 5px;
+    padding: 10px;
+    display: inline-block;
+    max-width: 60%;
+  }
+</style>
+<body>
+  <div class="container">
+    <div class="chat-window">
+      <div class="conversation-container">
+        <ul id="conversation"></ul>
+      </div>
+      <div class="input-panel">
+        <label class="input-label" for="question">Ask a question:</label>
+        <input type="text" class="input-field" id="question" placeholder="Type your question here...">
+        <button class="submit-button" id="submit">Ask</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const conversationElem = document.getElementById("conversation");
+    const questionInput = document.getElementById("question");
+    const submitButton = document.getElementById("submit");
+
+    submitButton.addEventListener("click", () => {
+      const question = questionInput.value.trim();
+
+      if (question.length === 0) {
+        return;
+      }
+
+      addMessage(question, true);
+      questionInput.value = "";
+
+      fetch(`/chatbot?question=${question}`)
+        .then(response => response.json())
+        .then(response => addMessage(response.answer, false))
+        .catch(() => addMessage("Sorry, something went wrong. Please try again later.", false));
+    });
+
+    function addMessage(message, isUser) {
+      const messageElem = document.createElement("li");
+      messageElem.classList.add(isUser ? "user-message" : "bot-message");
+      messageElem.innerHTML = `<span class="message-text">${message}</span>`;
+      conversationElem.appendChild(messageElem);
+      conversationElem.scrollTop = conversationElem.scrollHeight;
+    }
+  </script>
+</body>
+</html>
