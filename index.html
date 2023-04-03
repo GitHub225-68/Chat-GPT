@@ -266,11 +266,12 @@
         const hostname = window.location.hostname;
 
         async function getResponse(question) {
-        const response = await fetch(`${protocol}//${hostname}/chatbot?question=${question}`, {
-            mode: 'cors',
-            headers: {
-            "Access-Control-Allow-Origin": "*"
-            }
+        const response = await fetch(`${protocol}//${hostname}/chatbot?question=${encodeURIComponent(question)}`, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+        "Access-Control-Allow-Origin": "*"
+        }
         });
         const data = await response.json();
         return data.answer;
