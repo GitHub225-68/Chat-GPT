@@ -11,7 +11,30 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url);
   const pathname = parsedUrl.pathname;
 
-  if (pathname === "/chatbot") {
+  if (pathname === "/") {
+    let filePath = path.join(__dirname, "index.html");
+
+    const extname = path.extname(filePath);
+
+    // Handle static file requests
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        if (err.code == "ENOENT") {
+          // File not found
+          res.statusCode = 404;
+          res.end(`File not found: ${pathname}`);
+        } else {
+          // Server error
+          res.statusCode = 500;
+          res.end(`Server error: ${err.code}`);
+        }
+      } else {
+        // Success
+        res.setHeader("Content-type", getContentType(extname));
+        res.end(content);
+      }
+    });
+  } else if (pathname === "/chatbot") {
     const query = querystring.parse(parsedUrl.query);
     const question = query.question;
 
