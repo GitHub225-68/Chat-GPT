@@ -1,3 +1,166 @@
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <title>Question Answering App</title>
+    <style>
+      /* Chat container */
+      .chat-container {
+        border: 2px solid #ccc;
+        background-color: #f1f1f1;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px;
+        width: 60%;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* User message */
+      .user-message {
+        background-color: #04aa6d;
+        color: white;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        float: right;
+        clear: both;
+        max-width: 60%;
+      }
+
+      /* Bot message */
+      .bot-message {
+        background-color: white;
+        color: black;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        float: left;
+        clear: both;
+        max-width: 60%;
+      }
+
+      /* Clearfix to clear floats */
+      .clearfix::after {
+        content: "";
+        clear: both;
+        display: table;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <h1>Ask a Question</h1>
+      <div class="clearfix">
+        <div class="user-message">
+          <input type="text" id="question" placeholder="Type your question here...">
+          <button id="submit">Ask</button>
+        </div>
+      </div>
+      <div id="conversation"></div>
+    </div>
+
+    <script>
+      const apiKey = "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";
+      const submitButton = document.getElementById("submit");
+      const questionInput = document.getElementById("question");
+      const conversationDiv = document.getElementById("conversation");
+
+      let conversation = [];
+
+      function displayConversation() {
+        let chatHtml = "";
+        conversation.forEach(msg => {
+          if (msg.type === "user") {
+            chatHtml += `<div class="clearfix"><div class="user-message">${msg.text}</div></div>`;
+          } else {
+            chatHtml += `<div class="clearfix"><div class="bot-message">${msg.text}</div></div>`;
+          }
+        });
+        conversationDiv.innerHTML = chatHtml;
+        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+      }
+
+      submitButton.addEventListener("click", function () {
+        const question = questionInput.value.trim();
+        if (question !== "") {
+          const options = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            prompt: question,
+            max_tokens: 500,
+            temperature: 0.9, // adjust the temperature
+            top_p: 0.7, // adjust the top p value
+            frequency_penalty: 0.9, // adjust the frequency penalty
+            presence_penalty: 0.9, // adjust the presence penalty
+            n: 1,
+            stop: ".",
+          }),
+        };
+
+          const url = `https://api.openai.com/v1/engines/text-davinci-002/completions`;
+          fetch(url, options)
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.choices && data.choices.length > 0) {
+                let answer = data.choices[0].text;
+                rememberInformation(conversation, answer);
+                conversation.push({ type: "bot", text: answer });
+                displayConversation();
+              } else {
+                conversation.push({
+                  type: "bot",
+                  text: "Sorry, there was an error getting the answer.",
+                });
+                displayConversation();
+              }
+            })
+            .catch((error) => {
+              console.error(error);
+              conversation.push({
+                type: "bot",
+                text: "Sorry, there was an error getting the answer.",
+              });
+              displayConversation();
+            });
+        }
+        conversation.push({ type: "user", text: question });
+        displayConversation();
+
+        // Clear the input field
+        questionInput.value = "";
+      });
+
+      // Function to remember important information from the conversation
+      function rememberInformation(conversation, answer) {
+        // Look for important information and store it in localStorage
+        const keywords = ["name", "age", "city", "favorite color", "hobby", "job"];
+        conversation.forEach((msg, index) => {
+          keywords.forEach(keyword => {
+            if (msg.text.toLowerCase().includes(keyword)) {
+              let nextMsg = conversation[index + 1];
+              if (nextMsg && nextMsg.type === "bot") {
+                localStorage.setItem(keyword, nextMsg.text);
+              } else if (nextMsg && nextMsg.type === "user") {
+                let nextNextMsg = conversation[index + 2];
+                if (nextNextMsg && nextNextMsg.type === "bot") {
+                  localStorage.setItem(keyword, nextNextMsg.text);
+                }
+              }
+            }
+          });
+        });
+
+        // Remember the answer to the current question
+        localStorage.setItem("lastAnswer", answer);
+      }
+    </script>
+  </body>
+</html> -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,8 +169,8 @@
 </head>
 <style>
   .container {
-  max-width: 600px;
-  margin: 0 auto;
+    max-width: 600px;
+    margin: 0 auto;
   }
 
   .chat-window {
@@ -95,33 +258,51 @@
     </div>
   </div>
   <script>
-    const conversationElem = document.getElementById("conversation");
-    const questionInput = document.getElementById("question");
-    const submitButton = document.getElementById("submit");
+    document.addEventListener("DOMContentLoaded", function() {
+        const conversationElem = document.getElementById("conversation");
+        const questionInput = document.getElementById("question");
+        const submitButton = document.getElementById("submit");
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
 
-    submitButton.addEventListener("click", () => {
-      const question = questionInput.value.trim();
+        async function getResponse(question) {
+        const response = await fetch(`${protocol}//${hostname}/chatbot?question=${question}`, {
+            mode: 'cors',
+            headers: {
+            "Access-Control-Allow-Origin": "*"
+            }
+        });
+        const data = await response.json();
+        return data.answer;
+        }
 
-      if (question.length === 0) {
-        return;
-      }
+        submitButton.addEventListener("click", async () => {
+        const question = questionInput.value.trim();
 
-      addMessage(question, true);
-      questionInput.value = "";
+        if (question.length === 0) {
+            return;
+        }
 
-      fetch(`/chatbot?question=${question}`)
-        .then(response => response.json())
-        .then(response => addMessage(response.answer, false))
-        .catch(() => addMessage("Sorry, something went wrong. Please try again later.", false));
+        addMessage(question, true);
+        questionInput.value = "";
+
+        try {
+            const answer = await getResponse(question);
+            addMessage(answer, false);
+        } catch (error) {
+            addMessage("Sorry, something went wrong. Please try again later.", false);
+        }
+        });
+    
+        function addMessage(message, isUser) {
+            const messageElem = document.createElement("li");
+            messageElem.classList.add(isUser ? "user-message" : "bot-message");
+            messageElem.innerHTML = `
+                <span class="message-text">${message}</span>
+            `;
+            conversationElem.appendChild(messageElem);
+        }
     });
-
-    function addMessage(message, isUser) {
-      const messageElem = document.createElement("li");
-      messageElem.classList.add(isUser ? "user-message" : "bot-message");
-      messageElem.innerHTML = `<span class="message-text">${message}</span>`;
-      conversationElem.appendChild(messageElem);
-      conversationElem.scrollTop = conversationElem.scrollHeight;
-    }
-  </script>
-</body>
+        </script>
+    </body>
 </html>
