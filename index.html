@@ -1,4 +1,4 @@
-<!-- <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>Question Answering App</title>
@@ -18,8 +18,8 @@
 
       /* User message */
       .user-message {
-        background-color: #04aa6d;
-        color: white;
+        background-color: white;
+        color: black;
         margin-bottom: 10px;
         padding: 10px;
         border-radius: 5px;
@@ -46,6 +46,28 @@
         clear: both;
         display: table;
       }
+
+      .user-message-bubble {
+        background-color: #04aa6d;
+        color: white;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        float: right;
+        clear: both;
+        max-width: 60%;
+      }
+
+      .bot-message-bubble {
+        background-color: white;
+        color: black;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        float: left;
+        clear: both;
+        max-width: 60%;
+      }
     </style>
   </head>
   <body>
@@ -54,114 +76,89 @@
       <div class="clearfix">
         <div class="user-message">
           <input type="text" id="question" placeholder="Type your question here...">
-          <button id="submit">Ask</button>
+          <button id="submit" type="submit">Ask</button>
         </div>
       </div>
       <div id="conversation"></div>
     </div>
 
     <script>
-      const apiKey = "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";
-      const submitButton = document.getElementById("submit");
-      const questionInput = document.getElementById("question");
-      const conversationDiv = document.getElementById("conversation");
+      document.addEventListener("DOMContentLoaded", () => {
+        const inputField = document.getElementById("question");
+        const chatbotForm = document.querySelector(".user-message");
+        const conversationDiv = document.getElementById("conversation");
 
-      let conversation = [];
+        let conversation = [];
+        const apiKey = "APIkey"; // Replace with your API key
+        const chatbotURL = "https://api.openai.com/v1/engines/text-davinci-002/completions"; // Replace with your model's name
 
-      function displayConversation() {
-        let chatHtml = "";
-        conversation.forEach(msg => {
-          if (msg.type === "user") {
-            chatHtml += `<div class="clearfix"><div class="user-message">${msg.text}</div></div>`;
-          } else {
-            chatHtml += `<div class="clearfix"><div class="bot-message">${msg.text}</div></div>`;
+        document.getElementById("submit").addEventListener("click", async (event) => {
+          event.preventDefault();
+          const inputValue = inputField.value;
+          inputField.value = "";
+          conversation.push({ type: "user", text: inputValue });
+          displayConversation();
+
+          try {
+            const response = await fetch(chatbotURL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                prompt: inputValue,
+                max_tokens: 500,
+                n: 1,
+                stop: ".",
+                temperature: 0.9,
+                top_p: 0.7,
+                frequency_penalty: 0.9,
+                presence_penalty: 0.9
+              }),
+            });
+            const data = await response.json();
+            const chatbotAnswer = data.choices[0].text.trim();
+            conversation.push({ type: "bot", text: chatbotAnswer });
+            localStorage.setItem("lastAnswer", chatbotAnswer);
+            displayConversation();
+          } catch (error) {
+            console.error(error);
           }
         });
-        conversationDiv.innerHTML = chatHtml;
-        conversationDiv.scrollTop = conversationDiv.scrollHeight;
-      }
 
-      submitButton.addEventListener("click", function () {
-        const question = questionInput.value.trim();
-        if (question !== "") {
-          const options = {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            prompt: question,
-            max_tokens: 500,
-            temperature: 0.9, // adjust the temperature
-            top_p: 0.7, // adjust the top p value
-            frequency_penalty: 0.9, // adjust the frequency penalty
-            presence_penalty: 0.9, // adjust the presence penalty
-            n: 1,
-            stop: ".",
-          }),
-        };
-
-          const url = `https://api.openai.com/v1/engines/text-davinci-002/completions`;
-          fetch(url, options)
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.choices && data.choices.length > 0) {
-                let answer = data.choices[0].text;
-                rememberInformation(conversation, answer);
-                conversation.push({ type: "bot", text: answer });
-                displayConversation();
-              } else {
-                conversation.push({
-                  type: "bot",
-                  text: "Sorry, there was an error getting the answer.",
-                });
-                displayConversation();
-              }
-            })
-            .catch((error) => {
-              console.error(error);
-              conversation.push({
-                type: "bot",
-                text: "Sorry, there was an error getting the answer.",
-              });
-              displayConversation();
-            });
-        }
-        conversation.push({ type: "user", text: question });
-        displayConversation();
-
-        // Clear the input field
-        questionInput.value = "";
-      });
-
-      // Function to remember important information from the conversation
-      function rememberInformation(conversation, answer) {
-        // Look for important information and store it in localStorage
-        const keywords = ["name", "age", "city", "favorite color", "hobby", "job"];
-        conversation.forEach((msg, index) => {
-          keywords.forEach(keyword => {
-            if (msg.text.toLowerCase().includes(keyword)) {
-              let nextMsg = conversation[index + 1];
-              if (nextMsg && nextMsg.type === "bot") {
-                localStorage.setItem(keyword, nextMsg.text);
-              } else if (nextMsg && nextMsg.type === "user") {
-                let nextNextMsg = conversation[index + 2];
-                if (nextNextMsg && nextNextMsg.type === "bot") {
-                  localStorage.setItem(keyword, nextNextMsg.text);
-                }
-              }
+        function displayConversation() {
+          conversationDiv.innerHTML = "";
+          conversation.forEach((element) => {
+            const chatBubble = document.createElement("div");
+            chatBubble.classList.add("chat-bubble", element.type);
+            chatBubble.innerText = element.text;
+            conversationDiv.appendChild(chatBubble);
+            if (element.type === "user") {
+              const key = `user-${conversation.indexOf(element)}`;
+              localStorage.setItem(key, element.text);
             }
           });
-        });
+        }
 
-        // Remember the answer to the current question
-        localStorage.setItem("lastAnswer", answer);
-      }
+        // Load conversation from local storage
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith("user-")) {
+            conversation.push({ type: "user", text: localStorage.getItem(key) });
+          }
+        }
+        const lastAnswer = localStorage.getItem("lastAnswer");
+        if (lastAnswer) {
+          conversation.push({ type: "bot", text: lastAnswer });
+        }
+
+        displayConversation();
+      });
     </script>
   </body>
-</html> -->
-<!DOCTYPE html>
+</html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -258,52 +255,91 @@
     </div>
   </div>
   <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const conversationElem = document.getElementById("conversation");
-        const questionInput = document.getElementById("question");
-        const submitButton = document.getElementById("submit");
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
+    (async function() {
+      const conversationElem = document.getElementById("conversation");
+      const questionInput = document.getElementById("question");
+      const submitButton = document.getElementById("submit");
+      const apiKey = "APIkey";
 
-        async function getResponse(question) {
-        const response = await fetch(`${protocol}//${hostname}/chatbot?question=${encodeURIComponent(question)}`, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-        "Access-Control-Allow-Origin": "*"
+      async function sendMessage(message) {
+          try {
+            const response = await fetch("https://api.openai.com/v1/engines/text-davinci-002/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                "prompt": message,
+                "max_tokens": 200,
+                "temperature": 0.5
+              })
+            });
+            const data = await response.json();
+            if (!data || !data.choices || data.choices.length === 0) {
+              throw new Error("Invalid API response");
+            }
+            const text = data.choices[0].text;
+            return typeof text === "string" ? text.trim() : text;
+          } catch (error) {
+            console.error(error);
+            return "Sorry, an error occurred while processing your request.";
+          }
         }
-        });
-        const data = await response.json();
-        return data.answer;
+
+        function addUserMessage(message, isUser) {
+          const messageContainer = document.createElement('div');
+          messageContainer.classList.add('message-container');
+          if (isUser) {
+            messageContainer.classList.add('user-message');
+          } else {
+            messageContainer.classList.add('bot-message');
+          }
+          
+          const messageText = document.createElement('p');
+          messageText.classList.add('message-text');
+          messageText.innerText = message;
+          
+          messageContainer.appendChild(messageText);
+          
+          return messageContainer;
         }
 
-        submitButton.addEventListener("click", async () => {
-        const question = questionInput.value.trim();
-
-        if (question.length === 0) {
-            return;
-        }
-
-        addMessage(question, true);
-        questionInput.value = "";
-
-        try {
-            const answer = await getResponse(question);
-            addMessage(answer, false);
-        } catch (error) {
-            addMessage("Sorry, something went wrong. Please try again later.", false);
-        }
-        });
-    
-        function addMessage(message, isUser) {
-            const messageElem = document.createElement("li");
-            messageElem.classList.add(isUser ? "user-message" : "bot-message");
-            messageElem.innerHTML = `
-                <span class="message-text">${message}</span>
+        async function addBotMessage(message) {
+          const botMessageElem = document.createElement("li");
+          botMessageElem.classList.add("bot-message");
+          const botMessage = await sendMessage(message).trim();
+          if (botMessage.choices && botMessage.choices.length > 0) {
+            botMessageElem.innerHTML = `
+              <div class="message-text">${botMessage.choices[0].text.trim()}</div>
             `;
-            conversationElem.appendChild(messageElem);
+          } else {
+            botMessageElem.innerHTML = `
+              <div class="message-text">Sorry, I could not understand your question.</div>
+            `;
+          }
+          conversationElem.appendChild(botMessageElem);
+          conversationElem.scrollTop = conversationElem.scrollHeight;
         }
-    });
-        </script>
-    </body>
-</html>
+
+        submitButton.addEventListener("click", async function() {
+          const question = questionInput.value;
+          if (!question) return;
+          addUserMessage(question);
+          questionInput.value = "";
+          await addBotMessage(question);
+        });
+
+        questionInput.addEventListener("keypress", async function(event) {
+          if (event.keyCode === 13 || event.which === 13) {
+            const question = questionInput.value;
+            if (!question) return;
+            addUserMessage(question);
+            questionInput.value = "";
+            await addBotMessage(question);
+          }
+        });
+        })();
+        </script> 
+      </body>
+    </html> -->
